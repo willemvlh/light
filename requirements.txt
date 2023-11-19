@@ -1,2 +1,9 @@
+certifi==2023.7.22
+charset-normalizer==3.3.0
+colour==0.1.5
+idna==3.4
+requests==2.31.0
 rpi-ws281x==5.0.0
+RPi.GPIO==0.7.1
 smbus2==0.4.3
+urllib3==2.0.6

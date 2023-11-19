@@ -13,8 +13,8 @@ def interpolate_color(color1, color2, fraction):
     if not (0 <= fraction <= 1):
         raise ValueError("Fraction must be between 0 and 1")
 
-    r1, g1, b1 = color1
-    r2, g2, b2 = color2
+    r1, g1, b1 = color1.r, color1.g, color1.b
+    r2, g2, b2 = color2.r, color2.g, color2.b
 
     # Calculate the intermediate color
     interpolated_color = (
@@ -23,7 +23,26 @@ def interpolate_color(color1, color2, fraction):
         int(b1 + (b2 - b1) * fraction)
     )
 
-    return interpolated_color
+    return Color(*interpolated_color, 255)
+
+def lighten(rgb_tuple, factor):
+    """
+    Lightens the given RGB color tuple by the specified factor.
+
+    Args:
+    - rgb_tuple (tuple): A tuple containing three integers representing the RGB color values.
+    - factor (float): The factor by which to lighten the color. Should be between 0 and 1.
+
+    Returns:
+    - tuple: The lightened RGB color tuple.
+    """
+    # Ensure the factor is within the valid range
+    factor = max(0, min(1, factor))
+
+    # Lighten each RGB component
+    lightened_color = tuple(int(component + (255 - component) * factor) for component in rgb_tuple)
+
+    return lightened_color
 
 
 class Strip:
@@ -36,24 +55,34 @@ class Strip:
         self._logger(
             f"Initializing with {number_of_leds} number of leds, pin_out = {pin_out}")
 
-    def fill(self,rgb):
+    def fill(self,color, speed_in_seconds=1.0):
+        if color == self.current_color:
+            return
+        steps = 200 
         if self.current_color:
-            for x in range(21):
-                intermediate = interpolate_color(self.current_color, rgb, x /
-                        20) 
+            for x in range(steps+1):
+                intermediate = interpolate_color(self.current_color, color, x /
+                        steps) 
+                self._logger((intermediate.r,intermediate.g,intermediate.b))
                 self.fill_direct(intermediate)
-                time.sleep(0.05)
-            self.current_color = rgb
+                time.sleep(speed_in_seconds / steps)
+            self.current_color = color
         else:
-            self.fill_direct(rgb)
-            self.current_color = rgb
+            self.fill_direct(color)
+            self.current_color = color
 
-    def fill_direct(self, rgb):
-        color = Color(*rgb)
+    def fill_direct(self, color):
         for x in range(self._number_of_leds):
             self._strip.setPixelColor(x, color)
             self._strip.show()
-        self.current_color = rgb
+        self.current_color = color
+
+    def fade_between(self, start_color, stop_color, speed=0.5):
+        self.fill_direct(start_color)
+        self.fill(stop_color, speed)
+        time.sleep(1/speed)
+        self.fill(start_color)
+        time.sleep(1/speed)
 
     def clear(self):
         self.fill_direct((0, 0, 0))

@@ -14,7 +14,7 @@ class Weather:
         self.temp = temp
         self.secs_til_sunset = secs_til_sunset
 
-def _temp_to_color(self, temp: int) -> Color:
+def temp_to_color(temp) -> Color:
     if temp < -10:
         return Color(144, 0, 255)
     if temp < -5:

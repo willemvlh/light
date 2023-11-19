@@ -1,31 +1,20 @@
-from light_meter import LightMeter
-from strip import Strip
-import weather
 import time
+from rpi_ws281x import Color
+from weather import temp_to_color, Weather, get_weather
+from strip import Strip, lighten 
 
-meter = LightMeter()
-strip = Strip(30, 18)
-weather_time = None
+weather_time = time.time()
+weather = get_weather()
 
-def get_temp():
-    global weather_time
-    if not weather_time or (time.time() - weather_time > 1800):
-        weather_time = time.time()
-        return weather.get_weather().temp
-
-
-def loop():
-  lux = meter.measure()
-  temp = get_temp()
-  color = weather._temp_to_color(temp)
-  
-  if(lux < 100):
-      strip.fill(color.r,color.g,color.b,0)
-
-
-if __name__ == '__main__':
-    print("Starting program...")
+if __name__ == "__main__":
+    strip = Strip(30,18)
     while True:
-        loop()
-        time.sleep(1)
-
+        if weather == None or time.time() - weather_time > 1000:
+            weather_time = time.time()
+            weather = get_weather()
+        color = temp_to_color(weather.temp)
+        color2 = lighten((color.r,color.g,color.b), 0.5)
+        strip.fill(color)
+        time.sleep(10)
+        strip.fill(Color(*color2))
+        time.sleep(10)
