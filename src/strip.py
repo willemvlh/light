@@ -1,54 +1,17 @@
-from rpi_ws281x import PixelStrip, Color
+from rpi_ws281x import PixelStrip, Color as PixelColor
+from colour import Color
 import time
 
-def interpolate_color(color1, color2, fraction):
-    """
-    Interpolate between two RGB colors.
-
-    :param color1: A tuple (R, G, B) representing the first color.
-    :param color2: A tuple (R, G, B) representing the second color.
-    :param fraction: A float between 0 and 1 indicating the progress of the interpolation.
-    :return: A tuple (R, G, B) representing the interpolated color.
-    """
-    if not (0 <= fraction <= 1):
-        raise ValueError("Fraction must be between 0 and 1")
-
-    r1, g1, b1 = color1.r, color1.g, color1.b
-    r2, g2, b2 = color2.r, color2.g, color2.b
-
-    # Calculate the intermediate color
-    interpolated_color = (
-        int(r1 + (r2 - r1) * fraction),
-        int(g1 + (g2 - g1) * fraction),
-        int(b1 + (b2 - b1) * fraction)
-    )
-
-    return Color(*interpolated_color, 255)
-
-def lighten(rgb_tuple, factor):
-    """
-    Lightens the given RGB color tuple by the specified factor.
-
-    Args:
-    - rgb_tuple (tuple): A tuple containing three integers representing the RGB color values.
-    - factor (float): The factor by which to lighten the color. Should be between 0 and 1.
-
-    Returns:
-    - tuple: The lightened RGB color tuple.
-    """
-    # Ensure the factor is within the valid range
-    factor = max(0, min(1, factor))
-
-    # Lighten each RGB component
-    lightened_color = tuple(int(component + (255 - component) * factor) for component in rgb_tuple)
-
-    return lightened_color
-
+def to_pixel_color(color: Color):
+    r = int(color.red * 255)
+    g = int(color.green * 255)
+    b = int(color.blue * 255)
+    return PixelColor(r,g,b,255)
 
 class Strip:
     def __init__(self, number_of_leds, pin_out, logger=None) -> None:
         self._number_of_leds = number_of_leds
-        self.current_color = None
+        self.current_color = Color("black")
         self._strip = PixelStrip(number_of_leds, pin_out)
         self._strip.begin()
         self._logger = logger if logger else lambda x: None
@@ -56,25 +19,76 @@ class Strip:
             f"Initializing with {number_of_leds} number of leds, pin_out = {pin_out}")
 
     def fill(self,color, speed_in_seconds=1.0):
+        if color is None:
+            raise ValueError("Color must not be None")
+        if type(color) == str:
+            color = Color(color)
         if color == self.current_color:
             return
         steps = 200 
-        if self.current_color:
-            for x in range(steps+1):
-                intermediate = interpolate_color(self.current_color, color, x /
-                        steps) 
-                self._logger((intermediate.r,intermediate.g,intermediate.b))
-                self.fill_direct(intermediate)
-                time.sleep(speed_in_seconds / steps)
-            self.current_color = color
-        else:
-            self.fill_direct(color)
-            self.current_color = color
+        for x in self.current_color.range_to(color, steps):
+            self.fill_direct(x)
+            time.sleep(speed_in_seconds / steps)
+        self.current_color = color
 
+    def lighten(self, factor=0.5, speed_in_seconds=1.0):
+        lightened = self.current_color.set_luminance(value=factor)
+        self.fill(lightened, speed_in_seconds)
+        
+    def gradient(self, color1, color2):
+        color_range = color1.range_to(color2, self._number_of_leds)
+        for color, led_index in zip(color_range, range(self._number_of_leds)):
+            self.set_led(led_index, color)
+        self._strip.show()
+
+    def carousel(self, color, speed_in_seconds=1.0, reverse=False):
+        self.fill("black")
+        for x in range(self._number_of_leds):
+            led_index = self._number_of_leds - 1 - x if reverse else x 
+            self.set_led(led_index, color)
+            if x > 0:
+                previous_led_index = led_index + (1 if reverse else -1)
+                self.set_led(previous_led_index, Color("black"))
+            self._strip.show()
+            time.sleep(speed_in_seconds / self._number_of_leds)
+        self.set_led(self._number_of_leds - 1, Color("black"))
+        return
+
+    def converge(self, color, speed_in_seconds=1.0):
+        self.fill("black")
+        for x in range(int(self._number_of_leds / 2)):
+            self.set_led(x, color)
+            self.set_led(self._number_of_leds - 1 - x, color)
+            self._strip.show()
+            time.sleep(speed_in_seconds / self._number_of_leds)
+
+    def rainbow_cycle(self, wait_ms=20, iterations=5):
+        for j in range(256 * iterations):
+            for i in range(self._strip.numPixels()):
+                self.set_led(i, self.wheel((i + j) & 255))
+            self._strip.show()
+            time.sleep(wait_ms / 1000.0)
+
+    def wheel(self, pos):
+        if pos < 85:
+            return Color(rgb=(pos * 3 / 255, (255 - pos * 3) / 255, 0))
+        elif pos < 170:
+            pos -= 85
+            return Color(rgb=((255 - pos * 3) / 255, 0, (pos * 3) / 255))
+        else:
+            pos -= 170
+            return Color(rgb=(0, (pos * 3) / 255, (255 - pos * 3) / 255))
+
+    def set_led(self, number, color):
+        if(number > self._number_of_leds):
+            raise ValueError("I don't have that many leds")
+        self._strip.setPixelColor(number, to_pixel_color(color))
+
+        
     def fill_direct(self, color):
         for x in range(self._number_of_leds):
-            self._strip.setPixelColor(x, color)
-            self._strip.show()
+            self.set_led(x, color)
+        self._strip.show()
         self.current_color = color
 
     def fade_between(self, start_color, stop_color, speed=0.5):
@@ -85,4 +99,4 @@ class Strip:
         time.sleep(1/speed)
 
     def clear(self):
-        self.fill_direct((0, 0, 0))
+        self.fill_direct(Color("black")) 

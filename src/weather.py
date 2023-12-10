@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from rpi_ws281x import Color
+from colour import Color
 import requests
 from time import time
 import os
@@ -16,23 +16,22 @@ class Weather:
 
 def temp_to_color(temp) -> Color:
     if temp < -10:
-        return Color(144, 0, 255)
+        return Color("#b700ff")
     if temp < -5:
-        return Color(72, 0, 255)
+        return Color("#5d00ff")
     if temp <= 0:
-        return Color(0, 79, 255)
+        return Color("#3c00ff")
     if temp < 7:
-        return Color(0, 195, 255)
+        return Color("#0048ff")
     if temp < 12:
-        return Color(66, 255, 98)
+        return Color("#00aeff")
     if temp < 16:
-        return Color(220, 234, 0)
+        return Color("#55ff00")
     if temp < 22:
-        return Color(255, 200, 0)
+        return Color("#f2ff00")
     if temp < 27:
-        return Color(255, 128, 0)
-    return Color(255, 51, 0)
-
+        return Color("#ffa200")
+    return Color("#ff3700")
 
 def get_weather() -> Weather:
     r = requests.get(
