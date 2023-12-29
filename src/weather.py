@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from colour import Color
+from color import Color
 import requests
 from time import time
 import os
