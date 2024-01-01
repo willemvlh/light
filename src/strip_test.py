@@ -1,17 +1,22 @@
-#import RPi.GPIO as GPIO
-from strip import Strip, to_pixel_color
+from luminance import LuminanceProvider
+from strip import  Strip 
 from color import Color
 import time
+from effects import Effects
 
-strip = Strip(30,18)
+
+strip = Strip(30, 18)
 while True:
-    strip.wheel(iterations=2, speed_in_seconds=3, end_lightness=0.8)
-    strip.carousel(color=(Color("pink")), speed_in_seconds=0.5)
-    strip.carousel(color=(Color("aqua")), reverse=True, speed_in_seconds=0.5)
-    strip.converge(color=Color("yellow"))
+    lightness_provider = LuminanceProvider()
+    effects = Effects(strip)
+    effects.wheel(lightness_func=lightness_provider.get_lightness) 
+    effects.wheel(lightness_func=lightness_provider.get_lightness, reverse=True) 
+    effects.carousel(color=(Color("pink")), speed_in_seconds=0.5)
+    effects.carousel(color=(Color("aqua")), reverse=True, speed_in_seconds=0.5)
+    effects.converge(color=Color("yellow"))
     time.sleep(2)
-    strip.pulse(Color("green"))
-    strip.gradient(Color("red"), Color("pink"))
+    effects.pulse(Color("green"))
+    effects.gradient(Color("red"), Color("pink"))
     time.sleep(3)
     strip.clear()
     time.sleep(4)

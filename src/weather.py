@@ -14,6 +14,7 @@ class Weather:
         self.temp = temp
         self.secs_til_sunset = secs_til_sunset
 
+
 def temp_to_color(temp) -> Color:
     if temp < -10:
         return Color("#b700ff")
@@ -33,9 +34,11 @@ def temp_to_color(temp) -> Color:
         return Color("#ffa200")
     return Color("#ff3700")
 
+
 def get_weather() -> Weather:
     r = requests.get(
-        f"https://api.openweathermap.org/data/2.5/weather?q={CITY}&units=metric&appid={API_KEY}")
+        f"https://api.openweathermap.org/data/2.5/weather?q={CITY}&units=metric&appid={API_KEY}"
+    )
     result = r.json()
     temp = result["main"]["temp"]
     sunset = result["sys"]["sunset"]
